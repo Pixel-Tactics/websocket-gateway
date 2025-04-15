@@ -7,16 +7,16 @@ import (
 )
 
 type Router interface {
-	RouteMessage(client *messages.WebSocketMessager)
+	RouteMessage(message *messages.Message, client messages.WebSocketClient)
 }
 
 type RouterImpl struct {
 }
 
-func (router *RouterImpl) RouteMessage(client *messages.WebSocketMessager) {
-	switch client.Message.Type {
+func (router *RouterImpl) RouteMessage(message *messages.Message, client messages.WebSocketClient) {
+	switch message.Route {
 	default:
-		client.SendBack(Error(errors.New("invalid type")))
+		client.Send(messages.Error(errors.New("invalid type")))
 	}
 }
 

@@ -1,13 +1,16 @@
 package websockets
 
 import (
+	"errors"
 	"log"
 
 	"pixeltactics.com/websocket-gateway/src/messages"
+	jwt_auth "pixeltactics.com/websocket-gateway/src/utils/jwt"
 
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -28,19 +31,49 @@ const (
 var upgrader = websocket.Upgrader{}
 
 type Client struct {
+	Id      string
+	UserId  string
 	Hub     *ClientHub
 	Conn    *websocket.Conn
 	Receive chan *messages.Message
 }
 
+func (client *Client) GetUserId() (string, error) {
+	if client.UserId == "" {
+		return "", errors.New("user unauthenticated")
+	}
+	return client.UserId, nil
+}
+
+func (client *Client) Send(message *messages.Message) {
+	client.Receive <- message
+}
+
+func (client *Client) SendToUserId(userId string, message *messages.Message) {
+	otherClient, ok := client.Hub.GetClientFromUserId(userId)
+	if ok {
+		otherClient.Receive <- message
+	}
+}
+
+func (client *Client) SetUserId(userId string) {
+	client.UserId = userId
+}
+
+func (client *Client) Close() {
+	client.Hub.CloseChannel <- client
+	client.Conn.Close()
+}
+
 func (client *Client) handleReceive() {
 	defer func() {
-		client.Hub.UnregisterClientQueue <- client
-		client.Conn.Close()
+		client.Close()
 	}()
 	client.Conn.SetReadLimit(maxMessageSize)
 	client.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	client.Conn.SetPongHandler(func(string) error { client.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
+	acceptingAuth := true
 	for {
 		_, jsonBytes, err := client.Conn.ReadMessage()
 		if err != nil {
@@ -48,13 +81,30 @@ func (client *Client) handleReceive() {
 			break
 		}
 
-		message, err := messages.JsonBytesToMessage(jsonBytes)
-		if err != nil {
-			log.Println(err)
+		// Authenticate
+		if acceptingAuth {
+			userId, err := jwt_auth.Validate(string(jsonBytes))
+			if err != nil {
+				log.Println(err)
+				client.Receive <- messages.Error(err)
+				continue
+			}
+			client.Hub.UserIdChannel <- &UserIdRequest{
+				UserId: userId,
+				Client: client,
+			}
+			acceptingAuth = false
+			client.Receive <- messages.CreateMessage("AUTH", nil, "successfully authenticated as "+userId)
 			continue
 		}
 
-		client.Hub.MessageQueue <- &MessageRequest{
+		message, err := messages.JsonBytesToMessage(jsonBytes)
+		if err != nil {
+			log.Println(err)
+			client.Receive <- messages.Error(err)
+			continue
+		}
+		client.Hub.MessageChannel <- &MessageRequest{
 			Message: message,
 			Client:  client,
 		}
@@ -107,12 +157,13 @@ func ServeWebSocket(hub *ClientHub, w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &Client{
+		Id:      uuid.NewString(),
 		Hub:     hub,
 		Conn:    conn,
 		Receive: make(chan *messages.Message, 256),
 	}
 
-	client.Hub.RegisterClient <- client
+	client.Hub.AddChannel <- client
 
 	go client.handleSend()
 	go client.handleReceive()

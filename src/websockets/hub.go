@@ -11,7 +11,7 @@ type MessageRequest struct {
 	Client  *Client
 }
 
-type SetUserIdRequest struct {
+type UserIdRequest struct {
 	UserId string
 	Client *Client
 }
@@ -19,13 +19,29 @@ type SetUserIdRequest struct {
 type ClientHub struct {
 	Router gateway.Router
 
-	UserIdToClient        *datastructures.SyncMap[string, *Client]
-	ClientToUserId        *datastructures.SyncMap[*Client, string]
-	ClientList            *datastructures.SyncMap[*Client, bool]
-	RegisterClient        chan *Client
-	SetUserIdQueue        chan *SetUserIdRequest
-	UnregisterClientQueue chan *Client
-	MessageQueue          chan *MessageRequest
+	UserIdToClient *datastructures.SyncMap[string, *Client]
+	ClientToUserId *datastructures.SyncMap[*Client, string]
+	ClientList     *datastructures.SyncMap[*Client, bool]
+
+	AddChannel     chan *Client
+	CloseChannel   chan *Client
+	UserIdChannel  chan *UserIdRequest
+	MessageChannel chan *MessageRequest
+}
+
+func (hub *ClientHub) Run() {
+	for {
+		select {
+		case client := <-hub.AddChannel:
+			hub.ClientList.Store(client, true)
+		case client := <-hub.CloseChannel:
+			hub.closeClient(client)
+		case request := <-hub.UserIdChannel:
+			hub.setUserId(request.UserId, request.Client)
+		case request := <-hub.MessageChannel:
+			go hub.Router.RouteMessage(request.Message, request.Client)
+		}
+	}
 }
 
 func (hub *ClientHub) GetAllUserId() []string {
@@ -48,19 +64,17 @@ func (hub *ClientHub) GetUserIdFromClient(client *Client) (string, bool) {
 	return userId, true
 }
 
-func (hub *ClientHub) QueueSetUserId(userId string, client *Client) {
-	hub.SetUserIdQueue <- &SetUserIdRequest{
-		UserId: userId,
-		Client: client,
-	}
-}
-
 func (hub *ClientHub) setUserId(userId string, client *Client) {
+	oldClient, ok := hub.UserIdToClient.Load(userId)
+	if ok {
+		oldClient.Close()
+	}
+
 	hub.UserIdToClient.Store(userId, client)
 	hub.ClientToUserId.Store(client, userId)
 }
 
-func (hub *ClientHub) unregisterClient(client *Client) {
+func (hub *ClientHub) closeClient(client *Client) {
 	userId, ok := hub.ClientToUserId.Load(client)
 	if ok {
 		hub.ClientToUserId.Delete(client)
@@ -76,66 +90,17 @@ func (hub *ClientHub) unregisterClient(client *Client) {
 	}
 }
 
-func (hub *ClientHub) Send(clientId string, message *messages.Message) {
-	message.Identifier = "notification"
-	otherClient, ok := hub.GetClientFromUserId(clientId)
-	if ok {
-		otherClient.Receive <- message
-	}
-}
-
-func (hub *ClientHub) Run() {
-	for {
-		select {
-		case client := <-hub.RegisterClient:
-			hub.ClientList.Store(client, true)
-		case request := <-hub.SetUserIdQueue:
-			hub.setUserId(request.UserId, request.Client)
-		case client := <-hub.UnregisterClientQueue:
-			hub.unregisterClient(client)
-		case request := <-hub.MessageQueue:
-			message := request.Message
-			client := request.Client
-
-			var clientId *string
-			userId, ok := hub.GetUserIdFromClient(client)
-			if ok {
-				clientId = &userId
-			}
-
-			go hub.Router.RouteMessage(&messages.WebSocketMessager{
-				Message:  message,
-				ClientId: clientId,
-				Send: func(userId string, message *messages.Message) {
-					message.Identifier = "notification"
-					otherClient, ok := hub.GetClientFromUserId(userId)
-					if ok {
-						otherClient.Receive <- message
-					}
-				},
-				SendBack: func(inMessage *messages.Message) {
-					inMessage.Identifier = message.Identifier
-					client.Receive <- inMessage
-				},
-				SetClientId: func(userId string) {
-					hub.QueueSetUserId(userId, client)
-				},
-			})
-		}
-	}
-}
-
 func NewClientHub(
 	router gateway.Router,
 ) *ClientHub {
 	return &ClientHub{
-		Router:                router,
-		UserIdToClient:        datastructures.NewSyncMap[string, *Client](),
-		ClientToUserId:        datastructures.NewSyncMap[*Client, string](),
-		ClientList:            datastructures.NewSyncMap[*Client, bool](),
-		RegisterClient:        make(chan *Client, 256),
-		SetUserIdQueue:        make(chan *SetUserIdRequest, 256),
-		UnregisterClientQueue: make(chan *Client, 256),
-		MessageQueue:          make(chan *MessageRequest, 256),
+		Router:         router,
+		UserIdToClient: datastructures.NewSyncMap[string, *Client](),
+		ClientToUserId: datastructures.NewSyncMap[*Client, string](),
+		ClientList:     datastructures.NewSyncMap[*Client, bool](),
+		AddChannel:     make(chan *Client, 1024),
+		UserIdChannel:  make(chan *UserIdRequest, 1024),
+		CloseChannel:   make(chan *Client, 1024),
+		MessageChannel: make(chan *MessageRequest, 1024),
 	}
 }
