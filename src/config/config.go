@@ -2,8 +2,8 @@ package config
 
 import "os"
 
-var UserServiceUrl string
+var JwtSecret string
 
 func Setup() {
-	UserServiceUrl = os.Getenv("USER_MICROSERVICE_URL")
+	JwtSecret = os.Getenv("JWT_SECRET")
 }
