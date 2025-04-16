@@ -1,0 +1,49 @@
+routes:
+  - name: Session Incoming
+    prefix: session/incoming/
+    type: queue
+    direction: incoming
+
+  - name: Session Outgoing
+    prefix: session/outgoing/
+    type: queue
+    direction: outgoing
+
+  - name: Matchmaking Find
+    prefix: matchmaking/find/
+    type: stream
+    direction: incoming
+    schema: |
+      {
+          "type": "object",
+          "properties": {
+              "username": {
+                  "type": "string",
+                  "minLength": 1
+              }
+          }
+      }
+
+  - name: Matchmaking Invite
+    prefix: matchmaking/invite/
+    type: stream
+    direction: incoming
+    schema: |
+      {
+          "type": "object",
+          "properties": {
+              "sourceUsername": {
+                  "type": "string",
+                  "minLength": 1
+              },
+              "destinationUsername": {
+                  "type": "string",
+                  "minLength": 1
+              }
+          }
+      }
+
+  - name: Match Results
+    prefix: results/
+    type: stream
+    direction: outgoing
