@@ -1,8 +1,8 @@
 package websockets
 
 import (
-	"pixeltactics.com/websocket-gateway/src/gateway"
 	"pixeltactics.com/websocket-gateway/src/messages"
+	"pixeltactics.com/websocket-gateway/src/router"
 	"pixeltactics.com/websocket-gateway/src/utils/datastructures"
 )
 
@@ -17,7 +17,7 @@ type UserIdRequest struct {
 }
 
 type ClientHub struct {
-	Router gateway.Router
+	ControlRouter router.ControlRouter
 
 	UserIdToClient *datastructures.SyncMap[string, *Client]
 	ClientToUserId *datastructures.SyncMap[*Client, string]
@@ -39,7 +39,7 @@ func (hub *ClientHub) Run() {
 		case request := <-hub.UserIdChannel:
 			hub.setUserId(request.UserId, request.Client)
 		case request := <-hub.MessageChannel:
-			go hub.Router.RouteMessage(request.Message, request.Client)
+			go hub.ControlRouter.RouteMessage(request.Message, request.Client)
 		}
 	}
 }
@@ -91,10 +91,10 @@ func (hub *ClientHub) closeClient(client *Client) {
 }
 
 func NewClientHub(
-	router gateway.Router,
+	router router.ControlRouter,
 ) *ClientHub {
 	return &ClientHub{
-		Router:         router,
+		ControlRouter:  router,
 		UserIdToClient: datastructures.NewSyncMap[string, *Client](),
 		ClientToUserId: datastructures.NewSyncMap[*Client, string](),
 		ClientList:     datastructures.NewSyncMap[*Client, bool](),

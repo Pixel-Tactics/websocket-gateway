@@ -6,6 +6,7 @@ import (
 
 var RoutingPath string
 var JwtSecret string
+var ParsedRoutes []*Route
 
 func Setup() {
 	RoutingPath = os.Getenv("ROUTING_PATH")
@@ -13,5 +14,5 @@ func Setup() {
 	// JwtSecret = os.Getenv("JWT_SECRET")
 	JwtSecret = "testos"
 
-	ParseRoutes(RoutingPath)
+	ParsedRoutes = ParseRoutes(RoutingPath)
 }
