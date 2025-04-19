@@ -72,6 +72,8 @@ func (hub *ClientHub) setUserId(userId string, client *Client) {
 
 	hub.UserIdToClient.Store(userId, client)
 	hub.ClientToUserId.Store(client, userId)
+
+	client.Receive <- messages.CreateMessage("AUTH", nil, "successfully authenticated as "+userId)
 }
 
 func (hub *ClientHub) closeClient(client *Client) {
@@ -91,10 +93,10 @@ func (hub *ClientHub) closeClient(client *Client) {
 }
 
 func NewClientHub(
-	router router.ControlRouter,
+	controlRouter router.ControlRouter,
 ) *ClientHub {
 	return &ClientHub{
-		ControlRouter:  router,
+		ControlRouter:  controlRouter,
 		UserIdToClient: datastructures.NewSyncMap[string, *Client](),
 		ClientToUserId: datastructures.NewSyncMap[*Client, string](),
 		ClientList:     datastructures.NewSyncMap[*Client, bool](),

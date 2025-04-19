@@ -23,11 +23,12 @@ type Routes struct {
 }
 
 type Route struct {
-	Name      string    `yaml:"name" validate:"required,min=1"`
-	Prefix    string    `yaml:"prefix" validate:"required,min=1"`
-	Type      RouteType `yaml:"type" validate:"required,oneof=queue stream"`
-	Direction Direction `yaml:"direction" validate:"required,oneof=incoming outgoing"`
-	Schema    string    `yaml:"schema"`
+	Name       string    `yaml:"name" validate:"required,min=1"`
+	UserPath   string    `yaml:"userPath" validate:"required,min=1"`
+	BrokerPath string    `yaml:"brokerPath" validate:"required,min=1"`
+	Type       RouteType `yaml:"type" validate:"required,oneof=queue stream"`
+	Direction  Direction `yaml:"direction" validate:"required,oneof=incoming outgoing"`
+	Schema     string    `yaml:"schema"`
 }
 
 func ParseRoutes(filepath string) []*Route {

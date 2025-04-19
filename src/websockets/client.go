@@ -56,10 +56,6 @@ func (client *Client) SendToUserId(userId string, message *messages.Message) {
 	}
 }
 
-func (client *Client) SetUserId(userId string) {
-	client.UserId = userId
-}
-
 func (client *Client) Close() {
 	client.Hub.CloseChannel <- client
 	client.Conn.Close()
@@ -89,12 +85,12 @@ func (client *Client) handleReceive() {
 				client.Receive <- messages.Error(err)
 				continue
 			}
+			client.UserId = userId
 			client.Hub.UserIdChannel <- &UserIdRequest{
 				UserId: userId,
 				Client: client,
 			}
 			acceptingAuth = false
-			client.Receive <- messages.CreateMessage("AUTH", nil, "successfully authenticated as "+userId)
 			continue
 		}
 

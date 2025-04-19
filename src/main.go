@@ -1,24 +1,38 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"pixeltactics.com/websocket-gateway/src/config"
+	"pixeltactics.com/websocket-gateway/src/integrations/communication"
+	"pixeltactics.com/websocket-gateway/src/router"
+	"pixeltactics.com/websocket-gateway/src/websockets"
 )
 
 func main() {
 	godotenv.Load()
 	config.Setup()
 
-	// gatewayRouter := gateway.NewRouter()
-	// clientHub := websockets.NewClientHub(gatewayRouter)
+	rmqManager := communication.NewRMQManager()
 
-	// go clientHub.Run()
+	controlRouter := router.NewControlRouter()
+	inFactory := router.NewIncomingRouterFactory(rmqManager)
+	for _, routeConfig := range config.ParsedRoutes {
+		if routeConfig.Direction == config.DIRECTION_INCOMING {
+			router, err := inFactory.Generate(routeConfig)
+			if err != nil {
+				panic(err)
+			}
+			controlRouter.AddIncomingRouter(router)
+		}
+	}
 
-	// router := gin.Default()
+	clientHub := websockets.NewClientHub(controlRouter)
+	go clientHub.Run()
 
-	// router.GET("/", func(context *gin.Context) {
-	// 	websockets.ServeWebSocket(clientHub, context.Writer, context.Request)
-	// })
-
-	// router.Run("0.0.0.0:8080")
+	ginRouter := gin.Default()
+	ginRouter.GET("/", func(context *gin.Context) {
+		websockets.ServeWebSocket(clientHub, context.Writer, context.Request)
+	})
+	ginRouter.Run("0.0.0.0:8080")
 }

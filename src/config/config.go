@@ -4,15 +4,17 @@ import (
 	"os"
 )
 
-var RoutingPath string
+var RMQUrl string
+var RoutingFilePath string
 var JwtSecret string
 var ParsedRoutes []*Route
 
 func Setup() {
-	RoutingPath = os.Getenv("ROUTING_PATH")
+	RoutingFilePath = os.Getenv("ROUTING_FILE_PATH")
+	RMQUrl = os.Getenv("RABBITMQ_URL")
 
 	// JwtSecret = os.Getenv("JWT_SECRET")
 	JwtSecret = "testos"
 
-	ParsedRoutes = ParseRoutes(RoutingPath)
+	ParsedRoutes = ParseRoutes(RoutingFilePath)
 }
