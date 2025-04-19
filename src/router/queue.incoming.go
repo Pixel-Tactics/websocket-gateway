@@ -31,7 +31,7 @@ func (queue *IncomingQueue) RouteMessage(message *messages.Message, client messa
 		return err
 	}
 
-	channel, err := queue.RMQManager.GetChannel(username)
+	channel, err := queue.RMQManager.GetChannel(INCOMING_CHANNEL)
 	if err != nil {
 		return err
 	}

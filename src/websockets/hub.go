@@ -39,7 +39,7 @@ func (hub *ClientHub) Run() {
 		case request := <-hub.UserIdChannel:
 			hub.setUserId(request.UserId, request.Client)
 		case request := <-hub.MessageChannel:
-			go hub.ControlRouter.RouteMessage(request.Message, request.Client)
+			hub.ControlRouter.RouteMessage(request.Message, request.Client)
 		}
 	}
 }

@@ -7,6 +7,8 @@ import (
 	"pixeltactics.com/websocket-gateway/src/messages"
 )
 
+const INCOMING_CHANNEL = "incoming:"
+
 var ErrBadGateway = errors.New("bad gateway")
 var ErrInternalServer = errors.New("internal server error")
 

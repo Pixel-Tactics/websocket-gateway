@@ -56,6 +56,8 @@ func (rmq *RMQManager) connect() error {
 	return nil
 }
 
+// Gets channel with specified id. Do not forget to close the channel, see `CloseChannel(id string)`.
+// The function is thread-safe, but the channels are not. So, make sure only one thread accesses one id.
 func (rmq *RMQManager) GetChannel(id string) (*amqp091.Channel, error) {
 	rmq.RLock()
 	channel, ok := rmq.Channels[id]
@@ -82,6 +84,8 @@ func (rmq *RMQManager) GetChannel(id string) (*amqp091.Channel, error) {
 	return channel, nil
 }
 
+// Closes channel with specified id.
+// The function is thread-safe, but the channels are not. So, make sure only one thread accesses one id.
 func (rmq *RMQManager) CloseChannel(id string) {
 	rmq.Lock()
 	defer rmq.Unlock()

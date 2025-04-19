@@ -14,6 +14,10 @@ type WebSocketClient interface {
 	Send(message *Message)
 }
 
+type WebSocketHub interface {
+	SendToUserId(userId string, message *Message)
+}
+
 type Message struct {
 	Route string                 `json:"route"`
 	Data  map[string]interface{} `json:"data"`
