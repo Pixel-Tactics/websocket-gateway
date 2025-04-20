@@ -24,7 +24,7 @@ type Routes struct {
 
 type Route struct {
 	Name       string    `yaml:"name" validate:"required,min=1"`
-	UserPath   string    `yaml:"userPath" validate:"required,min=1"`
+	UserPrefix string    `yaml:"userPrefix" validate:"required,min=1"`
 	BrokerPath string    `yaml:"brokerPath" validate:"required,min=1"`
 	Type       RouteType `yaml:"type" validate:"required,oneof=queue stream"`
 	Direction  Direction `yaml:"direction" validate:"required,oneof=incoming outgoing"`

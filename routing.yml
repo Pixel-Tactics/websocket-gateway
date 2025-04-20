@@ -1,12 +1,12 @@
 routes:
   - name: Session Incoming
-    userPath: session/incoming
+    userPrefix: session/incoming/
     brokerPath: session/incoming/{{player}}
     type: queue
     direction: incoming
 
   - name: Session Outgoing
-    userPath: none
+    userPrefix: none
     brokerPath: session/outgoing/{{player}}
     type: queue
     direction: outgoing

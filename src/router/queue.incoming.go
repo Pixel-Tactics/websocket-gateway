@@ -36,17 +36,18 @@ func (queue *IncomingQueue) RouteMessage(message *messages.Message, client messa
 		return err
 	}
 
-	data, err := json.Marshal(message.Data)
+	message.Route = message.Route[len(queue.Config.UserPrefix):]
+	data, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
 
-	path := strings.ReplaceAll(queue.Config.BrokerPath, "{{player}}", username)
-	return channel.Publish("", path, true, false, amqp091.Publishing{
+	brokerPath := strings.ReplaceAll(queue.Config.BrokerPath, "{{player}}", username)
+	return channel.Publish("", brokerPath, true, false, amqp091.Publishing{
 		Body: data,
 	})
 }
 
 func (queue *IncomingQueue) IsRouterOf(route string) bool {
-	return route == queue.Config.UserPath
+	return strings.HasPrefix(route, queue.Config.UserPrefix)
 }
