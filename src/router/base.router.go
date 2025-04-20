@@ -8,6 +8,7 @@ import (
 )
 
 const INCOMING_CHANNEL = "incoming:"
+const OUTGOING_CHANNEL = "outgoing:"
 
 var ErrBadGateway = errors.New("bad gateway")
 var ErrInternalServer = errors.New("internal server error")
