@@ -20,6 +20,8 @@ type IncomingRouterFactoryImpl struct {
 func (factory *IncomingRouterFactoryImpl) Generate(config *config.Route) (IncomingRouter, error) {
 	if config.Type == "queue" {
 		return NewIncomingQueue(config, factory.RMQManager), nil
+	} else if config.Type == "stream" {
+		return NewIncomingStream(config, factory.RMQManager), nil
 	}
 	return nil, ErrInvalidRouterType
 }

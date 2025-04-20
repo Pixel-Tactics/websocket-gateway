@@ -11,6 +11,28 @@ routes:
     type: queue
     direction: outgoing
 
+  - name: Matchmaking Invite
+    userPrefix: matchmaking/invite
+    brokerPath: matchmaking/invite
+    type: stream
+    direction: incoming
+    schema: |
+      {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+              "sourceUsername": {
+                  "const": "{{player}}"
+              },
+              "destinationUsername": {
+                  "type": "string",
+                  "minLength": 1
+              }
+          },
+          "required": ["sourceUsername", "destinationUsername"],
+          "additionalProperties": false
+      }
+
   # - name: Matchmaking Find
   #   path: matchmaking/find/
   #   type: stream
@@ -20,25 +42,6 @@ routes:
   #         "type": "object",
   #         "properties": {
   #             "username": {
-  #                 "type": "string",
-  #                 "minLength": 1
-  #             }
-  #         }
-  #     }
-
-  # - name: Matchmaking Invite
-  #   path: matchmaking/invite
-  #   type: stream
-  #   direction: incoming
-  #   schema: |
-  #     {
-  #         "type": "object",
-  #         "properties": {
-  #             "sourceUsername": {
-  #                 "type": "string",
-  #                 "minLength": 1
-  #             },
-  #             "destinationUsername": {
   #                 "type": "string",
   #                 "minLength": 1
   #             }
