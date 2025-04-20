@@ -50,10 +50,7 @@ func (client *Client) Send(message *messages.Message) {
 }
 
 func (client *Client) SendToUserId(userId string, message *messages.Message) {
-	otherClient, ok := client.Hub.GetClientFromUserId(userId)
-	if ok {
-		otherClient.Receive <- message
-	}
+	client.Hub.SendToUserId(userId, message)
 }
 
 func (client *Client) Close() {

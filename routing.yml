@@ -5,10 +5,11 @@ routes:
     type: queue
     direction: incoming
 
-  # - name: Session Outgoing
-  #   brokerPath: session/outgoing/{{player}}
-  #   type: queue
-  #   direction: outgoing
+  - name: Session Outgoing
+    userPath: none
+    brokerPath: session/outgoing/{{player}}
+    type: queue
+    direction: outgoing
 
   # - name: Matchmaking Find
   #   path: matchmaking/find/

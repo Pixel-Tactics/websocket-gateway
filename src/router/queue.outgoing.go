@@ -8,6 +8,7 @@ import (
 
 	"github.com/rabbitmq/amqp091-go"
 	"pixeltactics.com/websocket-gateway/src/config"
+	"pixeltactics.com/websocket-gateway/src/events"
 	"pixeltactics.com/websocket-gateway/src/integrations/communication"
 	"pixeltactics.com/websocket-gateway/src/messages"
 )
@@ -32,23 +33,53 @@ type UsernameMessage struct {
 func NewOutgoingQueue(
 	config *config.Route,
 	rmqManager *communication.RMQManager,
+	eventManager events.EventManager,
+	messager messages.WebSocketHub,
 ) *OutgoingQueue {
-	return &OutgoingQueue{
+	queue := &OutgoingQueue{
 		Config:     config,
 		RMQManager: rmqManager,
+		Messager:   messager,
+		Users:      make(map[string]*UserQueue),
+		AddUser:    make(chan string, 256),
+		DeleteUser: make(chan string, 256),
+		Messages:   make(chan UsernameMessage, 256),
 	}
+	eventManager.On("user-connect", func(event interface{}) error {
+		username, ok := event.(string)
+		if !ok {
+			log.Println("[ERROR] cannot convert event to string")
+			return nil
+		}
+		queue.AddUser <- username
+		return nil
+	})
+	eventManager.On("user-disconnect", func(event interface{}) error {
+		username, ok := event.(string)
+		if !ok {
+			log.Println("[ERROR] cannot convert event to string")
+			return nil
+		}
+		queue.DeleteUser <- username
+		return nil
+	})
+	return queue
 }
 
-func (queue *OutgoingQueue) Run() error {
+func (queue *OutgoingQueue) Run() {
 	for {
 		select {
 		case username := <-queue.AddUser:
+			log.Println("Got add user")
 			_, exists := queue.Users[username]
 			if exists {
 				continue
 			}
-			queue.Users[username] = NewUserQueue(username, queue)
+			userQueue := NewUserQueue(username, queue)
+			queue.Users[username] = userQueue
+			go userQueue.Run()
 		case username := <-queue.DeleteUser:
+			log.Println("Got delete user")
 			userQueue, exists := queue.Users[username]
 			if !exists {
 				continue
@@ -56,7 +87,10 @@ func (queue *OutgoingQueue) Run() error {
 			userQueue.Close <- true
 			delete(queue.Users, username)
 		case msg := <-queue.Messages:
+			log.Println("Got message")
 			queue.Messager.SendToUserId(msg.Username, msg.Message)
+			// default:
+			// 	log.Println("Nothing")
 		}
 	}
 }
